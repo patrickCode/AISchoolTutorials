@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Microsoft.Data.DataView;
 using Microsoft.ML;
 using Microsoft.ML.Data;
-using Microsoft.ML.Trainers;
 using myMLNET.Common.Models;
+using System.Collections.Generic;
 using myMLNET.Common.Utils;
 using static Microsoft.ML.Data.DataDebuggerPreview;
 
@@ -26,24 +24,24 @@ namespace myMLNET
                 columns: new TextLoader.Column[]
                 {
                     new TextLoader.Column(CocoaPercent, DataKind.Single, 1),
-                    new TextLoader.Column("Label", DataKind.Single, 4)
+                    new TextLoader.Column("Label", DataKind.Single, 4) // Customer happiness is the label. The predicted features is called the Label.
                 },
                 hasHeader: true // First line of the data file is a header and not data row
             );
 
             IDataView trainingData = reader.Load(TrainDataPath);
-            Preview(trainingData);
+            PreviewUtil.Show(trainingData);
 
             // Creates a pipeline - All operations like data operations, transformation, training are bundled as a pipeline
             var pipeline =
                 mlContext.Transforms.Concatenate(outputColumnName: "Features", inputColumnNames: CocoaPercent)
-                .Append(mlContext.Regression.Trainers.PoissonRegression());
+                .Append(mlContext.Regression.Trainers.LbfgsPoissonRegression());
 
             // Train the model
-            TransformerChain<RegressionPredictionTransformer<PoissonRegressionModelParameters>> model = pipeline.Fit(trainingData);
+            var trainingModel = pipeline.Fit(trainingData);
 
             // Using the training for one-time prediction
-            var predictionEngine = model.CreatePredictionEngine<ChocolateInput, ChocolateOutput>(mlContext);
+            var predictionEngine = mlContext.Model.CreatePredictionEngine< ChocolateInput, ChocolateOutput>(trainingModel);
 
             // Get the prediction
             ChocolateOutput prediction = predictionEngine.Predict(new ChocolateInput() { CocoaPercent = 100 });
@@ -64,30 +62,6 @@ namespace myMLNET
             });
 
             Console.ReadKey();
-        }
-
-        static void Preview(IDataView traningData, int maxRows = 10)
-        {
-            var preview = traningData.Preview(maxRows);
-            Console.WriteLine("**************************************");
-            Console.WriteLine($"Loaded training data: {preview}");
-            Console.WriteLine("**************************************");
-
-            foreach (ColumnInfo columnInfo in preview.ColumnView)
-            {
-                Console.Write($"{columnInfo.Column.Name} ");
-            }
-            Console.WriteLine();
-
-            foreach (RowInfo rowInfo in preview.RowView)
-            {
-                foreach (KeyValuePair<string, object> row in rowInfo.Values)
-                {
-                    Console.Write($"{row.Value} ");
-                }
-                Console.WriteLine();
-            }
-            Console.WriteLine("**************************************");
         }
 
         public class ChocolateInput

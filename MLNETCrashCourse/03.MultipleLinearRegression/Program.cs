@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.ML;
-using Microsoft.Data.DataView;
 using Microsoft.ML.Data;
 using Microsoft.ML.Calibrators;
 using Microsoft.ML.Trainers;
@@ -14,17 +13,30 @@ namespace myMLNET
 {
     class MultipleLinearRegression
     {
-        /* Add data path code */
+        private static string TrainingDataPath = Path.Combine(Environment.CurrentDirectory, "data", "chocolate-data-multiple-linear-regression.txt");
         
         static void Main(string[] args)
         {
-            /* Add ML Context and TextLoader */
+            var mlContext = new MLContext();
 
-            /* Print out data summary */
+            TextLoader reader = mlContext.Data.CreateTextLoader(
+                columns: new TextLoader.Column[]
+                {
+                    new TextLoader.Column("Weight", DataKind.Single, 0),
+                    new TextLoader.Column("CocoaPercent", DataKind.Single, 1),
+                    new TextLoader.Column("Cost", DataKind.Single, 2),
+                    new TextLoader.Column("Label", DataKind.Single, 3) // Label is customer happiness. The predicted feature is called the label
+                },
+                hasHeader: true);
+            IDataView trainingData = reader.Load(TrainingDataPath);
+            PreviewUtil.Show(trainingData);
 
-            /* Create pipeline */
-            
-            /* Train the model */
+            var pipeline =
+                mlContext.Transforms.Concatenate("Features", "Weight")
+                .Append(mlContext.Regression.Trainers.LbfgsPoissonRegression());
+
+            var trainingModel = pipeline.Fit(trainingData);
+
 
             /* Get the graph data */
             
